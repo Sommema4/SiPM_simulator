@@ -1,11 +1,20 @@
 #include "SiPM.h"
 #include "Functions.h"
 #include "Scintillator.h"
+#include "json.hpp"
 
 #include <iostream>
+#include <fstream>
 
 int main()
 {
+    using json = nlohmann::json;
+    std::ifstream i("setting.json");
+    json j;
+    i >> j;
+    std::cout << j["fruit"] << std::endl;
+
+
     /* DEFINE SEMI-GLOBAL VARIABLES */
     int repetition = 100;
     double timestep = 10*1e-12; // 0.01 ns timestep
@@ -60,7 +69,7 @@ int main()
     /* RUN SIMULATION ROUTINE IN FOR CYCLE */
     //sipm.linearity_simulation("Integration.csv", crystal);
     //sipm.statistical_simulation("Photon_pulse.csv", crystal, deposited_energy[0], repetition);
-    sipm.wide_simulation("_p", crystal, deposited_energy, repetition);
+    //sipm.wide_simulation("_p", crystal, deposited_energy, repetition);
     //sipm.spice_simulation("Pulse.pwl", crystal, deposited_energy[0]);
 
     return 0;

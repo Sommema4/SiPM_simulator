@@ -2,6 +2,8 @@ TARGET ?= sipm.out
 SRC_DIRS ?= ./src
 HEAD_DIRS ?= ./include
 
+CC = g++
+
 SRCS := $(shell find $(SRC_DIRS) -name *.cpp -or -name *.c -or -name *.s)
 OBJS := $(addsuffix .o,$(basename $(SRCS)))
 DEPS := $(OBJS:.o=.d)

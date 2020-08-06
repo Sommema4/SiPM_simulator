@@ -9,6 +9,7 @@
 #include <algorithm>
 #include <ctime>
 
+
 Scintillator::Scintillator(std::string nm, double ly, std::vector<double> h_c, std::vector<double> h_w)
 {
     assert(h_c.size() == h_w.size()); // test the size of component vectors
