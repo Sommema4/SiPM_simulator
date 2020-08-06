@@ -10,15 +10,18 @@ int main()
 {
     using json = nlohmann::json;
     std::ifstream i("setting.json");
-    json j;
-    i >> j;
-    std::cout << j["fruit"] << std::endl;
+    json init;
+    i >> init;
 
 
-    /* DEFINE SEMI-GLOBAL VARIABLES */
-    int repetition = 100;
-    double timestep = 10*1e-12; // 0.01 ns timestep
-    double pulse_lenght = 2*1e-06;
+    /* DEFINE GLOBAL VARIABLES */
+
+    int repetition = init["global variables"]["repetition"]; // the number of repetition for each energy
+    double timestep = init["global variables"]["timestep"]; // the lenght of timestep [seconds]
+    double pulse_lenght = init["global variables"]["pulse_lenght"]; // the maximum lenght of the calculation [seconds]
+
+    std::cout << "sdfsfsfsd" << std::endl;
+    std::cout << init["global variables"]["deposited_energy"] << std::endl;
 
     std::vector<double> deposited_energy = {0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 1.5, 2.0}; // [MeV]
     //std::vector<double> deposited_energy = {0.1, 0.2}; // [MeV]

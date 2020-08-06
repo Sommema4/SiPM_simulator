@@ -1,5 +1,22 @@
 {
-    "fruit": "Apple",
-    "size": "Large",
-    "color": "Red"
+   "output":
+      {
+         "directory":"EJ-276",
+         "date": "6.8.2020"
+      },
+   "global variables": 
+      {
+         "repetition":"100", 
+         "timestep": 1e-11,
+         "pulse_lenght": 2e-06,
+         "deposited_energy": [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 1.5, 2.0]
+      },
+   "scintillator":
+      {
+         "name":"EJ-276.lib"
+      },
+   "sipm":
+      {
+          "name":"MicroFC60035.lib"
+      }
 }
