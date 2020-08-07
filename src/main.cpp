@@ -13,43 +13,34 @@ int main()
     json init;
     i >> init;
 
+    /* SIMULATION VARIABLES */
+    std::string sim_name = init["simulation"]["name"]; // the name of your simulation
+    std::string out_dir = init["simulation"]["directory"]; // the name of the directory where results will be saved - relative to the binary file
+    std::string sim_type = init["simulation"]["calculation_type"]; // the type of the simulation
+    bool out_aux = init["simulation"]["aux_output"]; // decides if auxiliary output should be written to file [boolean]
 
-    /* DEFINE GLOBAL VARIABLES */
-
-    int repetition = init["global variables"]["repetition"]; // the number of repetition for each energy
-    double timestep = init["global variables"]["timestep"]; // the lenght of timestep [seconds]
+    /* GLOBAL VARIABLES */
+    int repetition = init["global variables"]["repetition"]; // the number of simuation repetitons for each deposited energy
+    double timestep = init["global variables"]["timestep"]; // the lenght of timestep in the simulation [seconds]
     double pulse_lenght = init["global variables"]["pulse_lenght"]; // the maximum lenght of the calculation [seconds]
+    std::vector<double> deposited_energy = init["global variables"]["deposited_energy"]; // the list of energies of the simulation [MeV]
 
-    std::cout << "sdfsfsfsd" << std::endl;
-    std::cout << init["global variables"]["deposited_energy"] << std::endl;
+    /* SCINTILLATOR VARIABLES */
+    std::string scint_name[2] = init["scintillator"]["name"]; // the abbreviation of scintillator and its full name
+    std::string scint_lib = init["scintillator"]["library"]; // the scintillator library name
+    std::string particle[2] = init["scintillator"]["particle_type"]; // the abbreviation of particle and its full name
+    std::bool photon_list = init["scintillator"]["photon list"]; // decides if list of all generated photons should be written to auxiliary output [boolean]
 
-    std::vector<double> deposited_energy = {0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 1.5, 2.0}; // [MeV]
-    //std::vector<double> deposited_energy = {0.1, 0.2}; // [MeV]
-    double light_yield = 8600; // number of photons per 1 MeV
+    /* SiPM VARIABLES */
+    std::string sipm_name[2] = init["sipm"]["name"]; // the abbreviation of sipm and its full name
+    std::string sipm_lib = init["sipm"]["library"]; // the sipm library name
+    bool crosstalk = init["sipm"]["crosstalk"]; // decides if crosstalk should be taken into account during calculation [boolean]
+    bool afterpulse = init["sipm"]["afterpulse"]; // decides if afterpulse should be taken into account during calculation [boolean]
+    bool dark_current = init["sipm"]["dark_current"]; // decides if dark current should be taken into account during calculation [boolean]
 
-    /* STILBENE */
-    /*
-    std::vector<double> decay_component {5.21 * 1e-09, 21.33 * 1e-09, 134.77 * 1e-09}; // GAMMA
-    std::vector<double> decay_weight {0.95, 0.03, 0.02}; // GAMMA
-    //std::vector<double> decay_component {5.01 * 1e-09, 27.7 * 1e-09, 253.19 * 1e-09}; // NEUTRON
-    //std::vector<double> decay_weight {0.95, 0.04, 0.01}; // NEUTRON
-    */
-
-    /* NE-213 */
-    /*
-    //std::vector<double> decay_component {4.1 * 1e-09, 32 * 1e-09, 160 * 1e-09, 1870 * 1e-09}; // GAMMA
-    //std::vector<double> decay_weight {0.89, 0.07, 0.03, 0.01}; // GAMMA
-    //std::vector<double> decay_component {5.2 * 1e-09, 32 * 1e-09, 130 * 1e-09, 510 * 1e-09}; // NEUTRON
-    //std::vector<double> decay_weight {0.51, 0.23, 0.17, 0.09}; // NEUTRON
-    */
-
-    /* PLASTIC SCINTILLATOR EJ-276 */
-
-    std::vector<double> decay_component {4.0 * 1e-09, 16.0 * 1e-09, 98.0 * 1e-09, 690.0 * 1e-09}; // GAMMA
-    std::vector<double> decay_weight {0.71, 0.12, 0.08, 0.09}; // GAMMA
-    //std::vector<double> decay_component {3.9 * 1e-09, 18.0 * 1e-09, 106.0 * 1e-09, 800.0 * 1e-09}; // NEUTRON
-    //std::vector<double> decay_weight {0.47, 0.13, 0.13, 0.27}; // NEUTRON
-
+    /* SIMULATION PARAMETERS */
+    std::string interpolation = init["simulation parameters"]["interpolation"]; // chooses the type of interpolation technique
+    long double seed = init["simulation parameters"]["seed"]; // the seed number, if seed=0 the number is chosen based on the time
 
     print_seed(); // prints seed number which is based on current time
 

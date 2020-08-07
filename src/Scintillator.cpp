@@ -12,6 +12,15 @@
 
 Scintillator::Scintillator(std::string nm, double ly, std::vector<double> h_c, std::vector<double> h_w)
 {
+    std::ifstream i(lib);
+    json init;
+    i >> init;
+
+    std::string scint_name[2] = init[name]["name"]; // the abbreviation of scintillator and its full name
+    std::string scint_lib = init["scintillator"]["library"]; // the scintillator library name
+    std::string particle[2] = init["scintillator"]["particle_type"]; // the abbreviation of particle and its full name
+    std::bool photon_list = init["scintillator"]["photon list"]; // decides if list of all generated photons should be written to auxiliary output [boolean]
+
     assert(h_c.size() == h_w.size()); // test the size of component vectors
     name = nm;
     light_yield = ly;
@@ -27,36 +36,6 @@ Scintillator::Scintillator(std::string nm, double ly, std::vector<double> h_c, s
 Scintillator::~Scintillator()
 {
     //dtor
-}
-
-void read_scintillator_lib(std::string str)
-{
-    // spectrum must be in cumulative form!!!!!!!!!!
-    /*
-    std::string name = "./scintillator_lib/" + str;
-    std::ifstream file;
-    file.open(name);
-    if (file.is_open()){
-        std::vector<std::string> result;
-        while (std::getline(file, line)){
-            boost::split(result, line, boost::is_any_of(": "));
-            if (line.find("light yield [#/MeV]") != string::npos)
-                light_yield = std::stod(result[1]);
-            else if (line.find("decay component [ns, %, type]:") != string::npos)
-
-            else if (line.find("") != string::npos)
-
-            else if (line.find("") != string::npos)
-
-            else if (line.find("") != string::npos)
-
-            else if (line.find("") != string::npos)
-        }
-        file.close();
-    }
-    else
-        std::cout << "The emission spectrum file (" << name << ") could not be open." << std::endl;
-    */
 }
 
 void Scintillator::read_emission_spectrum(std::string name)

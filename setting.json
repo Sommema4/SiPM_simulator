@@ -1,22 +1,36 @@
 {
-   "output":
+   "simulation":
       {
-         "directory":"EJ-276",
-         "date": "6.8.2020"
+	 "name":"my_first_calculation",
+         "directory":"my_sipm",
+         "calculation_type": "full",
+	 "aux_output":true
       },
    "global variables": 
       {
-         "repetition":"100", 
-         "timestep": 1e-11,
-         "pulse_lenght": 2e-06,
+         "repetition":10, 
+         "timestep": 1.0e-11,
+         "pulse_lenght": 2.0e-06,
          "deposited_energy": [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 1.5, 2.0]
       },
    "scintillator":
       {
-         "name":"EJ-276.lib"
+         "name":["EJ-276", "EJ-276"],
+	 "library":"scintillator.json",
+	 "particle_type":"neutron",
+	 "photon list":true
       },
    "sipm":
       {
-          "name":"MicroFC60035.lib"
+         "name":["FC60035", "MicroFC60035"],
+	 "library":"sipm.json",
+	 "crosstalk":true,
+	 "afterpulse":true,
+	 "dark_current":true
+      },
+   "simulation parameters":
+      {
+	 "interpolation":"spline",
+	 "seed":0
       }
 }
