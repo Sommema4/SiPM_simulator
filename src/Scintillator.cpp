@@ -1,7 +1,9 @@
 #include "Scintillator.h"
 #include "Functions.h"
 #include "spline.h"
+#include "json.hpp"
 
+#include <assert.h>
 #include <vector>
 #include <iostream>
 #include <fstream>
@@ -10,26 +12,23 @@
 #include <ctime>
 
 
-Scintillator::Scintillator(std::string nm, double ly, std::vector<double> h_c, std::vector<double> h_w)
+Scintillator::Scintillator(std::string scint_name, std::string scint_lib, std::string par_type)
 {
-    std::ifstream i(lib);
-    json init;
-    i >> init;
-
-    std::string scint_name[2] = init[name]["name"]; // the abbreviation of scintillator and its full name
-    std::string scint_lib = init["scintillator"]["library"]; // the scintillator library name
-    std::string particle[2] = init["scintillator"]["particle_type"]; // the abbreviation of particle and its full name
-    std::bool photon_list = init["scintillator"]["photon list"]; // decides if list of all generated photons should be written to auxiliary output [boolean]
-
-    assert(h_c.size() == h_w.size()); // test the size of component vectors
-    name = nm;
-    light_yield = ly;
-    halftime_component = h_c;
-    halftime_weight = h_w;
-    for (int i=0;i<halftime_component.size();i++){
+    std::ifstream i(scint_lib);
+    nlohmann::json scin;
+    i >> scin;
+    assert(scin.find(scint_name) !=  scin.end());
+    name = scint_name;
+    light_yield = scin[scint_name]["light_yield"]["value"];
+    particle_type = par_type;
+    particle_abbrev = scin[scint_name]["particle"][par_type]["abbreviation"].get<std::string>();
+    halftime_component = scin[scint_name]["particle"][particle_type]["decay component"].get<std::vector<double>>();
+    halftime_weight = scin[scint_name]["particle"][particle_type]["decay intensity"].get<std::vector<double>>();
+    assert(halftime_component.size() == halftime_weight.size()); // test the size of component vectors
+    for(int i=0;i<halftime_component.size();i++)
         halftime_amplitude.push_back(halftime_weight[i] / halftime_component[i]);
-        //std::cout << halftime_amplitude[i] << std::endl;
-    }
+    emission_spectrum.x = scin[scint_name]["emission spectrum"]["wavelenght"].get<std::vector<double>>();
+    emission_spectrum.y = scin[scint_name]["emission spectrum"]["cumulative probability"].get<std::vector<double>>();
     //ctor
 }
 
@@ -38,31 +37,9 @@ Scintillator::~Scintillator()
     //dtor
 }
 
-void Scintillator::read_emission_spectrum(std::string name)
-{
-    // spectrum must be in cumulative form!!!!!!!!!!
-    // .txt file must be tab delimited
-
-    std::ifstream file;
-    file.open(name);
-    if (file.is_open()){
-        //std::cout << name << std::endl;
-        double a, b;
-        while(file >> a >> b)
-        {
-            emission_spectrum.x.push_back(a);
-            emission_spectrum.y.push_back(b);
-        }
-        file.close();
-    }
-    else
-        std::cout << "The emission spectrum file (" << name << ") could not be open." << std::endl;
-}
-
 std::vector<light> Scintillator::generate_light(double deposited_energy)
 {
     // spectrum must be in cumulative form!!!!!!!!!!
-
 
     photons = int((deposited_energy * light_yield) + 0.5); // round to integer
     std::vector<light> output;

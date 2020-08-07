@@ -15,6 +15,10 @@
 
 SiPM::SiPM(std::string nm, double gf, double ov, double rq, double cq, double cd, double rd, double rl, double cm, int nc, std::vector<double> af_w, std::vector<double> af_c, double dcr, double ts, double pl)
 {
+    std::ifstream i(sipm_lib);
+    nlohmann::json sipm;
+    i >> sipm;
+
     name = nm;
     geometry_factor = gf; // approximation of geometry factor
     overvoltage = ov; // maximum overvoltage

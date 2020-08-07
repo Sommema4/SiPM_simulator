@@ -26,13 +26,13 @@ int main()
     std::vector<double> deposited_energy = init["global variables"]["deposited_energy"]; // the list of energies of the simulation [MeV]
 
     /* SCINTILLATOR VARIABLES */
-    std::string scint_name[2] = init["scintillator"]["name"]; // the abbreviation of scintillator and its full name
+    std::string scint_name = init["scintillator"]["name"]; // the full name of scintillator
     std::string scint_lib = init["scintillator"]["library"]; // the scintillator library name
-    std::string particle[2] = init["scintillator"]["particle_type"]; // the abbreviation of particle and its full name
-    std::bool photon_list = init["scintillator"]["photon list"]; // decides if list of all generated photons should be written to auxiliary output [boolean]
+    std::string particle = init["scintillator"]["particle_type"]; // the abbreviation of particle and its full name
+    bool photon_list = init["scintillator"]["photon list"]; // decides if list of all generated photons should be written to auxiliary output [boolean]
 
     /* SiPM VARIABLES */
-    std::string sipm_name[2] = init["sipm"]["name"]; // the abbreviation of sipm and its full name
+    std::string sipm_name = init["sipm"]["name"]; // the full name of sipm
     std::string sipm_lib = init["sipm"]["library"]; // the sipm library name
     bool crosstalk = init["sipm"]["crosstalk"]; // decides if crosstalk should be taken into account during calculation [boolean]
     bool afterpulse = init["sipm"]["afterpulse"]; // decides if afterpulse should be taken into account during calculation [boolean]
@@ -44,10 +44,8 @@ int main()
 
     print_seed(); // prints seed number which is based on current time
 
-    /* DEFINE SCINTILLATOR AND READ ITS EMISSION SPECTRUM */
-    Scintillator crystal("EJ276", light_yield, decay_component, decay_weight);
-    // ARGUMENTS: deposited energy, light yield, halflife components, halflife component weights
-    crystal.read_emission_spectrum("EJ-276.txt"); // read emission spectrum - spectrum must be in cumulative form
+    /* CONSTRUCTS SCINTILLATOR AND READS ATA FROM SCINTILLATOR LIBRARY */
+    Scintillator crystal(scint_name, scint_lib, particle);
     crystal.print_scintillator();
 
     /* DEFINE SiPM AND SAVE ITS ABSORPTION SPECTRUM */
