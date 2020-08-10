@@ -21,6 +21,19 @@ struct coordinates
     std::vector<double> y; // QE value || emission probability || absorption probability
 };
 
+struct sipm_par
+{
+    double C_eq;
+    double a1;
+    double a2;
+    double T_i;
+    double T_d;
+    double a_m_1;
+    double a_m_2;
+    double T_i2;
+    double T_d2;
+};
+
 // prototypes
 bool compare_light_time(const light &, const light &);
 void add_pulse(int, double, std::string, std::vector<light>&);

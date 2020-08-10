@@ -38,6 +38,9 @@ int main()
     bool afterpulse = init["sipm"]["afterpulse"]; // decides if afterpulse should be taken into account during calculation [boolean]
     bool dark_current = init["sipm"]["dark_current"]; // decides if dark current should be taken into account during calculation [boolean]
 
+    R_l = sipm[sipm_name]["name"]; // load resistor
+    I_th = sipm[sipm_name]["name"]; // threshold level of current to sustain the avalanche = 0.0001 A
+
     /* SIMULATION PARAMETERS */
     std::string interpolation = init["simulation parameters"]["interpolation"]; // chooses the type of interpolation technique
     long double seed = init["simulation parameters"]["seed"]; // the seed number, if seed=0 the number is chosen based on the time

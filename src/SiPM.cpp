@@ -13,42 +13,53 @@
 #include <ctime>
 #include <iomanip>
 
-SiPM::SiPM(std::string nm, double gf, double ov, double rq, double cq, double cd, double rd, double rl, double cm, int nc, std::vector<double> af_w, std::vector<double> af_c, double dcr, double ts, double pl)
+SiPM::SiPM(std::string sipm_name, std::string sipm_lib, double current_threshold, double load_resistor, double time_step, double pls_lenght)
 {
     std::ifstream i(sipm_lib);
     nlohmann::json sipm;
     i >> sipm;
 
-    name = nm;
-    geometry_factor = gf; // approximation of geometry factor
-    overvoltage = ov; // maximum overvoltage
-    R_q = rq; // quenching resistor
-    C_q = cq; // capacitance of quenching resistor
-    C_d = cd; //
-    R_d = rd; //
-    R_l = rl; // load resistor
-    C_m = cm; // parasitic capacitance of the grid
-    I_th = 0.0001; // threshold level of current to sustain the avalanche
-    N_c = nc; // number of microcells
-    C_eq = (N_c - 1) * ((C_d * C_q) / (C_d + C_q)) + N_c * C_m;
-    a1 = (R_d * C_d * (R_q + R_l) + R_q * C_q * (R_d + R_l) + C_eq * R_l * (R_q + R_d)) / (R_q + R_d + R_l);
-    a2 = ((R_d * R_q * R_l) / (R_q + R_d + R_l)) * (C_eq * (C_d + C_q) + C_d * C_q);
+    assert(assert(sipm.find(sipm_name) !=  sipm.end());
+    name = sipm_name;
+    geometry_factor = sipm[sipm_name]["name"];
+    overvoltage = sipm[sipm_name]["name"];
+    R_q = sipm[sipm_name]["name"]; // quenching resistor
+    C_q = sipm[sipm_name]["name"]; // capacitance of quenching resistor
+    C_d = sipm[sipm_name]["name"];
+    R_d = sipm[sipm_name]["name"];
+    C_m = sipm[sipm_name]["name"]; // parasitic capacitance of the grid
+    N_c = sipm[sipm_name]["name"]; // number of microcells
+
+    I_th = current_threshold; // threshold current to sustain an avalanche
+    R_l = load_resistor; // load resistor
+
+    afterpulse_weights = sipm[sipm_name][""][""].get<std::vector<double>>();
+    afterpulse_components = sipm[sipm_name][""][""].get<std::vector<double>>();
+    dark_count_rate = sipm[sipm_name]["name"];
     T_q = R_q * C_q;
-    T_i = a2 / a1;
-    T_d = a1;
-    a_m_1 = R_q * (C_d + C_q) + R_l * (C_eq + C_d);
-    a_m_2 = R_q * R_l * (C_eq * (C_d + C_q) + C_d * C_q);
-    T_i2 = (2 * a_m_2) / (a_m_1 + sqrt(pow(a_m_1, 2) - 4 * a_m_2));
-    T_d2 = (2 * a_m_2) / (a_m_1 - sqrt(pow(a_m_1, 2) - 4 * a_m_2));
-    afterpulse_weights = af_w;
-    afterpulse_components = af_c;
-    dark_count_rate = dcr;
-    for (int i=0;i<nc;i++){
+
+    sipm_par LUT_temp[N_c+1];
+
+    for (int i=0;i<N_c+1;i++){
+        LUT_temp[i].C_eq = (N_c - i) * ((C_d * C_q) / (C_d + C_q)) + N_c * C_m;
+        LUT_temp[i].a1 = (R_d * C_d * (R_q + i * R_l) + R_q * C_q * (R_d + i * R_l) + LUT_temp[i].C_eq * R_l * (R_q + R_d)) / (R_q + R_d + i * R_l);
+        LUT_temp[i].a2 = ((R_d * R_q * R_l) / (R_q + R_d + i * R_l)) * (LUT_temp[i].C_eq * (C_d + C_q) + i * C_d * C_q);
+        LUT_temp[i].T_i = (2 * LUT_temp[i].a2) / (LUT_temp[i].a1 + sqrt(pow(LUT_temp[i].a1, 2) - 4 * LUT_temp[i].a2);
+        LUT_temp[i].T_d = (2 * LUT_temp[i].a2) / (LUT_temp[i].a1 - sqrt(pow(LUT_temp[i].a1, 2) - 4 * LUT_temp[i].a2);
+        LUT_temp[i].a_m_1 = R_q * (C_d + C_q) + R_l * (LUT_temp[i].C_eq + i * C_d);
+        LUT_temp[i].a_m_2 = R_q * R_l * (LUT[i].C_eq * (C_d + C_q) + i * C_d * C_q);
+        LUT_temp[i].T_i2 = (2 * LUT_temp[i].a_m_2) / (LUT_temp[i].a_m_1 + sqrt(pow(LUT_temp[i].a_m_1, 2) - 4 * LUT_temp[i].a_m_2));
+        LUT_temp[i].T_d2 = (2 * LUT_temp[i].a_m_2) / (LUT_temp[i].a_m_1 - sqrt(pow(LUT_temp[i].a_m_1, 2) - 4 * LUT_temp[i].a_m_2));
+    }
+
+    LUT = LUT_temp;
+
+    for (int i=0;i<N_c;i++){
         Microcell temp(i, overvoltage);
         SiPM_microcells.push_back(temp);
     };
-    timestep = ts;
-    pulse_lenght = pl;
+    timestep = time_step;
+    pulse_lenght = pls_lenght;
     output_size = int(pulse_lenght / timestep);
     spline afterpulse_function;
     spline crosstalk_function;

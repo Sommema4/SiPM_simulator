@@ -75,6 +75,7 @@ class SiPM
         std::vector<double> arr_afterpulse;
         std::vector<double> arr_crosstalk;
         std::vector<double> arr_dark;
+        sipm_par LUT[];
 };
 
 #endif // SIPM_H
