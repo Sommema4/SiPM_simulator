@@ -4,7 +4,12 @@
 	 "name":"my_first_calculation",
          "directory":"my_sipm",
          "calculation_type": "full",
-	 "aux_output":true
+	 "aux_output":true,
+	 "dark_current":true,
+	 "overvoltage":2.5,
+	 "geometry factor":1,
+	 "load resistor":1.0,
+	 "threshold current":0.0001
       },
    "global variables": 
       {
@@ -26,15 +31,9 @@
 	 "library":"sipm.json",
 	 "crosstalk":true,
 	 "afterpulse":true,
-	 "afterpulse component":[10e-9, 100e-09],
-	 "afterpulse intensity":[0.5, 0.5],
-	 "dark_current":true,
-	 "overvoltage":2.5,
-	 "geometry factor":1,
-	 "load resistor":1.0,
-	 "threshold current":0.0001
+	 "dark current":true
       },
-   "simulation parameters":
+   "algorithm parameters":
       {
 	 "interpolation":"spline",
 	 "seed":0

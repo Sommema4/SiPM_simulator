@@ -2,7 +2,9 @@
 #include "Microcell.h"
 #include "Functions.h"
 #include "spline.h"
+#include "json.hpp"
 
+#include <assert.h>
 #include <vector>
 #include <numeric>
 #include <algorithm>
@@ -13,56 +15,103 @@
 #include <ctime>
 #include <iomanip>
 
-SiPM::SiPM(std::string sipm_name, std::string sipm_lib, double current_threshold, double load_resistor, double time_step, double pls_lenght)
+#ifndef NDEBUG
+#   define M_Assert(Expr, Msg) \
+    __M_Assert(#Expr, Expr, __FILE__, __LINE__, Msg)
+#else
+#   define M_Assert(Expr, Msg) ;
+#endif
+
+void __M_Assert(const char* expr_str, bool expr, const char* file, int line, const char* msg)
 {
+    if (!expr)
+    {
+        std::cerr << "Assert failed:\t" << msg << "\n"
+            << "Expected:\t" << expr_str << "\n"
+            << "Source:\t\t" << file << ", line " << line << "\n";
+        abort();
+    }
+}
+
+SiPM::SiPM(std::string sipm_name, std::string sipm_lib, double ov, double geo_factor, double load_resistor, double current_threshold, double time_step, double pls_lenght)
+{
+    /* Open up a .json file */
     std::ifstream i(sipm_lib);
     nlohmann::json sipm;
     i >> sipm;
 
-    assert(assert(sipm.find(sipm_name) !=  sipm.end());
+    /* Save inner parameters of SiPM to SiPM object */
+    assert(sipm.find(sipm_name) !=  sipm.end());
     name = sipm_name;
-    geometry_factor = sipm[sipm_name]["name"];
-    overvoltage = sipm[sipm_name]["name"];
-    R_q = sipm[sipm_name]["name"]; // quenching resistor
-    C_q = sipm[sipm_name]["name"]; // capacitance of quenching resistor
-    C_d = sipm[sipm_name]["name"];
-    R_d = sipm[sipm_name]["name"];
-    C_m = sipm[sipm_name]["name"]; // parasitic capacitance of the grid
-    N_c = sipm[sipm_name]["name"]; // number of microcells
-
-    I_th = current_threshold; // threshold current to sustain an avalanche
-    R_l = load_resistor; // load resistor
-
-    afterpulse_weights = sipm[sipm_name][""][""].get<std::vector<double>>();
-    afterpulse_components = sipm[sipm_name][""][""].get<std::vector<double>>();
-    dark_count_rate = sipm[sipm_name]["name"];
+    R_q = sipm[sipm_name]["inner parameters"]["R_q"]; // quenching resistor
+    C_q = sipm[sipm_name]["inner parameters"]["C_q"]; // capacitance of quenching resistor
+    C_d = sipm[sipm_name]["inner parameters"]["C_d"];
+    R_d = sipm[sipm_name]["inner parameters"]["R_d"];
+    C_m = sipm[sipm_name]["inner parameters"]["C_m"]; // parasitic capacitance of the grid
+    N_c = sipm[sipm_name]["inner parameters"]["N_c"]; // number of microcells
     T_q = R_q * C_q;
 
-    sipm_par LUT_temp[N_c+1];
+    /* Parse global simulation parameters to SiPM object */
+    geometry_factor = geo_factor;
+    overvoltage = ov;
+    I_th = current_threshold; // threshold current to sustain an avalanche
+    R_l = load_resistor;
 
-    for (int i=0;i<N_c+1;i++){
-        LUT_temp[i].C_eq = (N_c - i) * ((C_d * C_q) / (C_d + C_q)) + N_c * C_m;
-        LUT_temp[i].a1 = (R_d * C_d * (R_q + i * R_l) + R_q * C_q * (R_d + i * R_l) + LUT_temp[i].C_eq * R_l * (R_q + R_d)) / (R_q + R_d + i * R_l);
-        LUT_temp[i].a2 = ((R_d * R_q * R_l) / (R_q + R_d + i * R_l)) * (LUT_temp[i].C_eq * (C_d + C_q) + i * C_d * C_q);
-        LUT_temp[i].T_i = (2 * LUT_temp[i].a2) / (LUT_temp[i].a1 + sqrt(pow(LUT_temp[i].a1, 2) - 4 * LUT_temp[i].a2);
-        LUT_temp[i].T_d = (2 * LUT_temp[i].a2) / (LUT_temp[i].a1 - sqrt(pow(LUT_temp[i].a1, 2) - 4 * LUT_temp[i].a2);
-        LUT_temp[i].a_m_1 = R_q * (C_d + C_q) + R_l * (LUT_temp[i].C_eq + i * C_d);
-        LUT_temp[i].a_m_2 = R_q * R_l * (LUT[i].C_eq * (C_d + C_q) + i * C_d * C_q);
-        LUT_temp[i].T_i2 = (2 * LUT_temp[i].a_m_2) / (LUT_temp[i].a_m_1 + sqrt(pow(LUT_temp[i].a_m_1, 2) - 4 * LUT_temp[i].a_m_2));
-        LUT_temp[i].T_d2 = (2 * LUT_temp[i].a_m_2) / (LUT_temp[i].a_m_1 - sqrt(pow(LUT_temp[i].a_m_1, 2) - 4 * LUT_temp[i].a_m_2));
+    /* Save parameters of noise effects to SiPM object and use spline interpolation */
+    double a;
+    M_Assert(a = sipm[sipm_name]["noise effects"]["dark current"]["dark acount rate"], "asasd");
+    //M_Assert(("A must be equal to B", a == sipm[sipm_name]["noise effects"]["dark current"]["dark acount rate"]));
+    //assert(a = sipm[sipm_name]["noise effects"]["dark current"]["dark count rate"]);
+    std::cout << "spatny a: " << a << std::endl;
+    afterpulse_weights = sipm[sipm_name]["noise effects"]["afterpulse"]["afterpulse intensity"].get<std::vector<double>>();
+    afterpulse_components = sipm[sipm_name]["noise effects"]["afterpulse"]["afterpulse component"].get<std::vector<double>>();
+    for (int i=0;i<afterpulse_weights.size();i++)
+        afterpulse_amplitude.push_back(afterpulse_weights[i] / afterpulse_components[i]);
+    std::vector<double> x_afterpulse = sipm[sipm_name]["noise effects"]["afterpulse"]["function"]["overvoltage"].get<std::vector<double>>();
+    std::vector<double> y_afterpulse = sipm[sipm_name]["noise effects"]["afterpulse"]["function"]["probability"].get<std::vector<double>>();
+    std::vector<double> x_crosstalk = sipm[sipm_name]["noise effects"]["crosstalk"]["function"]["kacer"].get<std::vector<double>>();
+    std::vector<double> y_crosstalk = sipm[sipm_name]["noise effects"]["crosstalk"]["function"]["probability"].get<std::vector<double>>();
+    spline afterpulse_function;
+    afterpulse_function.set_points(x_afterpulse, y_afterpulse);
+    spline crosstalk_function;
+    crosstalk_function.set_points(y_crosstalk, x_crosstalk);
+    dark_count_rate = sipm[sipm_name]["noise effects"]["dark current"]["dark count rate"].get<double>();
+
+    /* Save absorption spectrum to SiPM object */
+    for (auto& el : sipm[sipm_name]["absorption spectrum"].items()){
+        if(el.key() != "source"){
+            coordinates temp;
+            double voltage = sipm[sipm_name]["absorption spectrum"][el.key()]["value"].get<double>();
+            //std::cout << voltage << std::endl;
+            temp.x = sipm[sipm_name]["absorption spectrum"][el.key()]["wavelenght"].get<std::vector<double>>();
+            temp.y = sipm[sipm_name]["absorption spectrum"][el.key()]["probability"].get<std::vector<double>>();
+            absorption_spectrum.insert({voltage, temp});
+        }
     }
 
-    LUT = LUT_temp;
+    /* Create and save a look-up table to SiPM object */
+    LUT = new sipm_par[N_c+1];
+    for (int i=0;i<N_c+1;i++){
+        LUT[i].C_eq = (N_c - i) * ((C_d * C_q) / (C_d + C_q)) + N_c * C_m;
+        LUT[i].a1 = (R_d * C_d * (R_q + i * R_l) + R_q * C_q * (R_d + i * R_l) + LUT[i].C_eq * R_l * (R_q + R_d)) / (R_q + R_d + i * R_l);
+        LUT[i].a2 = ((R_d * R_q * R_l) / (R_q + R_d + i * R_l)) * (LUT[i].C_eq * (C_d + C_q) + i * C_d * C_q);
+        LUT[i].T_i = (2 * LUT[i].a2) / LUT[i].a1 + sqrt(pow(LUT[i].a1, 2) - 4 * LUT[i].a2);
+        LUT[i].T_d = (2 * LUT[i].a2) / LUT[i].a1 - sqrt(pow(LUT[i].a1, 2) - 4 * LUT[i].a2);
+        LUT[i].a_m_1 = R_q * (C_d + C_q) + R_l * (LUT[i].C_eq + i * C_d);
+        LUT[i].a_m_2 = R_q * R_l * (LUT[i].C_eq * (C_d + C_q) + i * C_d * C_q);
+        LUT[i].T_i2 = (2 * LUT[i].a_m_2) / (LUT[i].a_m_1 + sqrt(pow(LUT[i].a_m_1, 2) - 4 * LUT[i].a_m_2));
+        LUT[i].T_d2 = (2 * LUT[i].a_m_2) / (LUT[i].a_m_1 - sqrt(pow(LUT[i].a_m_1, 2) - 4 * LUT[i].a_m_2));
+    }
 
     for (int i=0;i<N_c;i++){
         Microcell temp(i, overvoltage);
         SiPM_microcells.push_back(temp);
     };
+
     timestep = time_step;
     pulse_lenght = pls_lenght;
     output_size = int(pulse_lenght / timestep);
-    spline afterpulse_function;
-    spline crosstalk_function;
+
     for(int k=0;k<output_size;k++){
         arr_bins.push_back(k * timestep);
         arr_light.push_back(0);
@@ -70,13 +119,13 @@ SiPM::SiPM(std::string sipm_name, std::string sipm_lib, double current_threshold
         arr_crosstalk.push_back(0);
         arr_dark.push_back(0);
     }
-    for (int i=0;i<afterpulse_weights.size();i++)
-        afterpulse_amplitude.push_back(afterpulse_weights[i] / afterpulse_components[i]);
     //ctor
 }
 
 SiPM::~SiPM()
 {
+    if(LUT) // True if LUT is not a null pointer
+        delete[] LUT;
     //dtor
 }
 
@@ -94,10 +143,8 @@ void SiPM::dark_current(std::vector<light>& buffer)
         temp.time = time;
         temp.wavelenght = 0;
         temp.origin = "dark_current";
-        //std::cout << temp.time << " " << temp.origin << std::endl;
         buffer.push_back(temp);
     }
-    //std::cout << buffer.size() << std::endl;
     std::sort(buffer.begin(), buffer.end(), compare_light_time);
 }
 
@@ -106,7 +153,6 @@ void SiPM::map_light(std::vector<light>& buffer)
     int ind;
     for (int i=0;i<buffer.size();i++){
         ind = rand() % N_c;
-        //std::cout << ind << std::endl;
         buffer[i].index = ind;
     }
 }
@@ -138,94 +184,6 @@ void SiPM::reset()
     }
 }
 
-void SiPM::read_absorption_spectrum(std::string name)
-{
-    std::vector<double> x, y;
-    double last_c = -10;
-
-    std::ifstream file;
-    file.open(name);
-    if (file.is_open()){
-        while(!file.eof()){
-            double a, b, c;
-            file >> a >> b >> c; // extracts 2 floating point values separated by whitespace
-            //std::cout << a << " " << b / 100.0 << " " << c << std::endl;
-            x.push_back(a);
-            y.push_back(b / 100.0);
-            if ((c != last_c && last_c != -10) || file.eof()){
-                //std::cout << "Here is Johnny! " << c << std::endl;
-                x.pop_back();
-                y.pop_back();
-                std::vector<double> temp_x, temp_y;
-                coordinates temp;
-                temp.x = x;
-                temp.y = y;
-                absorption_spectrum.insert({last_c, temp});
-                x.erase(x.begin(),x.end());
-                y.erase(y.begin(),y.end());
-                x.push_back(a);
-                y.push_back(b);
-            }
-            last_c = c;
-        }
-    }
-    else
-        std::cout << "The emission spectrum file (" << name << ") could not be open." << std::endl;
-
-    /*
-    for (auto itr = absorption_spectrum.begin(); itr != absorption_spectrum.end(); ++itr) {
-        std::cout << itr->first << std::endl;
-        std::vector<double> temp1 = (itr->second).x;
-        std::vector<double> temp2 = (itr->second).y;
-        for (int i=0;i<temp1.size();i++)
-            std::cout << temp1[i] << " " << temp2[i] << std::endl;
-    }
-    */
-}
-
-void SiPM::read_crosstalk_probability(std::string name)
-{
-    std::vector<double> x, y;
-    std::ifstream file;
-    file.open(name);
-    if (file.is_open()){
-        while(!file.eof()){
-            double a, b;
-            file >> a >> b; // extracts 2 floating point values separated by whitespace
-            //std::cout << a << " " << b << std::endl;
-            x.push_back(a);
-            y.push_back(b);
-        }
-    }
-    else
-        std::cout << "The emission spectrum file (" << name << ") could not be open." << std::endl;
-
-    //spline crosstalk_function;
-    crosstalk_function.set_points(y, x);
-}
-
-void SiPM::read_afterpulse_probability(std::string name)
-{
-    std::vector<double> x, y;
-    std::ifstream file;
-    file.open(name);
-
-    if (file.is_open()){
-        while(!file.eof()){
-            double a, b;
-            file >> a >> b; // extracts 2 floating point values separated by whitespace
-            //std::cout << a << " " << b << std::endl;
-            x.push_back(a);
-            y.push_back(b);
-        }
-    }
-    else
-        std::cout << "The emission spectrum file (" << name << ") could not be open." << std::endl;
-
-    //spline afterpulse_function;
-    afterpulse_function.set_points(x, y);
-}
-
 void SiPM::print_sipm(void)
 {
     std::cout << std::endl;
@@ -241,16 +199,6 @@ void SiPM::print_sipm(void)
     std::cout << "C_m: " << C_m << " F" << std::endl;
     std::cout << "I_th: " << I_th << " A" << std::endl;
     std::cout << "N_c: " << N_c << " #" << std::endl;
-    std::cout << "C_eq: " << C_eq << " F" << std::endl;
-    std::cout << "a1: " << a1 << " ?" << std::endl;
-    std::cout << "a2: " << a2 << " ?" << std::endl;
-    std::cout << "T_q: " << T_q << " s" << std::endl;
-    std::cout << "T_i: " << T_i << " s" << std::endl;
-    std::cout << "T_d: " << T_d << " s" << std::endl;
-    std::cout << "a_m_1: " << a_m_1 << " ?" << std::endl;
-    std::cout << "a_m_2: " << a_m_2 << " ?" << std::endl;
-    std::cout << "T_i2: " << T_i2 << " s" << std::endl;
-    std::cout << "T_d2: " << T_d2 << " s" << std::endl;
     std::cout << "Microcell vector size: " << SiPM_microcells.size() << " #" << std::endl;
     std::cout << "------------------------------------" << std::endl;
     std::cout << std::endl;

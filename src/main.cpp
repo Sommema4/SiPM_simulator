@@ -18,6 +18,10 @@ int main()
     std::string out_dir = init["simulation"]["directory"]; // the name of the directory where results will be saved - relative to the binary file
     std::string sim_type = init["simulation"]["calculation_type"]; // the type of the simulation
     bool out_aux = init["simulation"]["aux_output"]; // decides if auxiliary output should be written to file [boolean]
+    double overvoltage = init["simulation"]["overvoltage"];
+    double geometry_factor = init["simulation"]["geometry factor"];
+    double R_l = init["simulation"]["load resistor"]; // load resistor
+    double I_th = init["simulation"]["threshold current"]; // threshold level of current to sustain the avalanche = 0.0001 A
 
     /* GLOBAL VARIABLES */
     int repetition = init["global variables"]["repetition"]; // the number of simuation repetitons for each deposited energy
@@ -36,29 +40,20 @@ int main()
     std::string sipm_lib = init["sipm"]["library"]; // the sipm library name
     bool crosstalk = init["sipm"]["crosstalk"]; // decides if crosstalk should be taken into account during calculation [boolean]
     bool afterpulse = init["sipm"]["afterpulse"]; // decides if afterpulse should be taken into account during calculation [boolean]
-    bool dark_current = init["sipm"]["dark_current"]; // decides if dark current should be taken into account during calculation [boolean]
+    bool dark_current = init["sipm"]["dark current"]; // decides if dark current should be taken into account during calculation [boolean]
 
-    R_l = sipm[sipm_name]["name"]; // load resistor
-    I_th = sipm[sipm_name]["name"]; // threshold level of current to sustain the avalanche = 0.0001 A
-
-    /* SIMULATION PARAMETERS */
-    std::string interpolation = init["simulation parameters"]["interpolation"]; // chooses the type of interpolation technique
-    long double seed = init["simulation parameters"]["seed"]; // the seed number, if seed=0 the number is chosen based on the time
+    /* ALGORITHM PARAMETERS */
+    std::string interpolation = init["algorithm parameters"]["interpolation"]; // chooses the type of interpolation technique
+    long double seed = init["algorithm parameters"]["seed"]; // the seed number, if seed=0 the number is chosen based on the time
 
     print_seed(); // prints seed number which is based on current time
 
-    /* CONSTRUCTS SCINTILLATOR AND READS ATA FROM SCINTILLATOR LIBRARY */
+    /* CONSTRUCTS SCINTILLATOR AND READS DATA FROM SCINTILLATOR LIBRARY */
     Scintillator crystal(scint_name, scint_lib, particle);
     crystal.print_scintillator();
 
-    /* DEFINE SiPM AND SAVE ITS ABSORPTION SPECTRUM */
-    std::vector<double> afterpulse_weights = {0.5, 0.5};
-    std::vector<double> afterpulse_components = {10*1e-09, 100*1e-09};
-    SiPM sipm("MicroFC60035", 1.0, 2.5, 633000, 20 * 1e-15, 170.1 * 1e-15, 300, 10.0, 3 * 1e-15, 18980, afterpulse_weights, afterpulse_components, 10 * 1e+06, timestep, pulse_lenght);
-    // ARGUMENTS: geometry factor, overvoltage, R_q, C_q, C_d, R_d, R_load, C_m, number of microcells, af_ts, af_tl, dark count rate, timestep, pulse lenght
-    sipm.read_absorption_spectrum("MicroFC_60035.txt"); // read absorption spectrum - spectrum must be in its natural form
-    sipm.read_afterpulse_probability("Afterpulse.txt"); // read absorption spectrum - spectrum must be in its natural form
-    sipm.read_crosstalk_probability("Crosstalk.txt"); // read absorption spectrum - spectrum must be in its natural form
+    /* CONSTRUCTS SiPM AND READS DATA FROM SiPM LIBRARY */
+    SiPM sipm(sipm_name, sipm_lib, overvoltage, geometry_factor, R_l, I_th, timestep, pulse_lenght);
     sipm.print_sipm();
 
     /* RUN SIMULATION ROUTINE IN FOR CYCLE */
@@ -66,6 +61,8 @@ int main()
     //sipm.statistical_simulation("Photon_pulse.csv", crystal, deposited_energy[0], repetition);
     //sipm.wide_simulation("_p", crystal, deposited_energy, repetition);
     //sipm.spice_simulation("Pulse.pwl", crystal, deposited_energy[0]);
+
+    //sipm.~SiPM(); // explicitely called destructor
 
     return 0;
 }

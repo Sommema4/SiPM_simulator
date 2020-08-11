@@ -15,7 +15,7 @@ class SiPM
 {
     public:
         friend class Microcell;
-        SiPM(std::string, double, double, double, double, double, double, double, double, int, std::vector<double>, std::vector<double>, double, double, double);
+        SiPM(std::string, std::string, double, double, double, double, double, double);
         virtual ~SiPM();
         void simulate(std::vector<light>);
         void map_light(std::vector<light>&);
@@ -75,7 +75,7 @@ class SiPM
         std::vector<double> arr_afterpulse;
         std::vector<double> arr_crosstalk;
         std::vector<double> arr_dark;
-        sipm_par LUT[];
+        sipm_par* LUT;
 };
 
 #endif // SIPM_H
