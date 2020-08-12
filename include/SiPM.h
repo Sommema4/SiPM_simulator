@@ -64,6 +64,8 @@ class SiPM
         std::vector<double> afterpulse_amplitude;
         double dark_count_rate;
         std::vector<class Microcell> SiPM_microcells;
+        std::vector<class Microcell> Microcell_discharge;
+        std::vector<class Microcell> Microcell_charge;
         std::map<double, coordinates> absorption_spectrum;
         spline crosstalk_function;
         spline afterpulse_function;

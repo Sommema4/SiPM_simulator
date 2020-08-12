@@ -24,6 +24,32 @@ Microcell::~Microcell()
     //dtor
 }
 
+bool Microcell::discharge_init(light in, double time)
+{
+    if (in.origin == "scintillator_light"){
+        condition = sipm->geometry_factor * qe; // calculates PDE
+        qe = calculate_QE(in.wavelenght, sipm);
+    }
+    else{
+        condition = 1; // in case of dark current, afterpulses or optical crosstalk
+    }
+
+    double dice = get_rand_uni_dist();
+    if (dice <= condition){
+        last_trigger = time;
+        return true;
+    }
+    else
+        return false;
+}
+
+void Microcell::discharge_stop(double time)
+{
+    last_quench = time;
+    discharge = false;
+    charge = true;
+}
+
 void Microcell::load_discharge(double time, SiPM *sipm)
 {
     if (last_quench == 0.0 && last_trigger == 0.0){ // in case there has been no hit of the microcell, do nothing
@@ -100,11 +126,9 @@ void Microcell::load_discharge(double time, SiPM *sipm)
 double Microcell::calculate_overvoltage(double time, SiPM *sipm)
 {
     if (last_trigger == 0.0){
-        //std::cout << "if sipm->overvoltage " << sipm->overvoltage << std::endl;
         return sipm->overvoltage;
     }
     else{
-        //std::cout << "else sipm->overvoltage " << 1 - exp(-time / sipm->T_d2) << std::endl;
         return sipm->overvoltage * (1 - exp(-time / sipm->T_d2));
     }
 }
@@ -256,4 +280,18 @@ void Microcell::reset(SiPM *sipm)
     last_trigger = 0;
     last_quench = 0;
     V_ov = sipm->overvoltage;
+}
+int Microcell::get_ID()
+{
+    return id;
+}
+
+bool Microcell::operator<(const Microcell& right)const
+{
+      return (this->id < right.id);
+}
+
+bool Microcell::operator==(const Microcell& right)const
+{
+      return (this->id == right.id);
 }

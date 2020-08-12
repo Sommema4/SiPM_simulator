@@ -58,11 +58,11 @@ SiPM::SiPM(std::string sipm_name, std::string sipm_lib, double ov, double geo_fa
     R_l = load_resistor;
 
     /* Save parameters of noise effects to SiPM object and use spline interpolation */
-    double a;
-    M_Assert(a = sipm[sipm_name]["noise effects"]["dark current"]["dark acount rate"], "asasd");
+    //double a;
+    //M_Assert(a = sipm[sipm_name]["noise effects"]["dark current"]["dark acount rate"], "asasd");
     //M_Assert(("A must be equal to B", a == sipm[sipm_name]["noise effects"]["dark current"]["dark acount rate"]));
     //assert(a = sipm[sipm_name]["noise effects"]["dark current"]["dark count rate"]);
-    std::cout << "spatny a: " << a << std::endl;
+    //std::cout << "spatny a: " << a << std::endl;
     afterpulse_weights = sipm[sipm_name]["noise effects"]["afterpulse"]["afterpulse intensity"].get<std::vector<double>>();
     afterpulse_components = sipm[sipm_name]["noise effects"]["afterpulse"]["afterpulse component"].get<std::vector<double>>();
     for (int i=0;i<afterpulse_weights.size();i++)
@@ -131,6 +131,7 @@ SiPM::~SiPM()
 
 void SiPM::dark_current(std::vector<light>& buffer)
 {
+    /* RANDOMLY GENERATES PHOTONS CREATED DUE TO DARK CURRENT */
     double mean_dark_count = dark_count_rate * arr_bins.back();
     int number = get_rand_poiss_dist(mean_dark_count);
 
@@ -150,6 +151,7 @@ void SiPM::dark_current(std::vector<light>& buffer)
 
 void SiPM::map_light(std::vector<light>& buffer)
 {
+    /* RANDOMLY DECIDES WHAT MICROCELL WAS HIT BY PHOTON */
     int ind;
     for (int i=0;i<buffer.size();i++){
         ind = rand() % N_c;
@@ -159,6 +161,47 @@ void SiPM::map_light(std::vector<light>& buffer)
 
 void SiPM::simulate(std::vector<light> buffer)
 {
+    for (int i=0;i<arr_bins.size();i++){ // loop over all discrete times of the simulation
+
+        /* While statement fills discharge and charge container with fired microcells */
+        while (std::abs(buffer[0].time - arr_bins[i]) < (timestep / 2.0)){ // if true the photon hit a microcell
+
+            auto it = find_if(Microcell_discharge.begin(), Microcell_discharge.end(), [] (const Microcell& obj) {return obj.get_ID() == buffer[0].index;}); // find iterator to object with the same index in discharge container
+                if (it != Microcell_discharge.end()){ // the microcell is in the discharge container already
+                    buffer.erase(buffer.begin()); // photon is deleted - the microcell cannot be discharged two times at the same time
+                }
+            auto it = find_if(Microcell_charge.begin(), Microcell_charge.end(), [] (const Microcell& obj) {return obj.get_ID() == buffer[0].index;}); // find iterator to object with the same index in charge container
+            if (it != Microcell_charge.end()){ // the microcell is in the charge container already
+                if (it->discharge_init(buffer[0], arr_bins[i])){ // check whether photon fires the microcell
+                    std::move(Microcell_charge.begin(), it, std::back_inserter(Microcell_discharge)); // move the microcell from charge container to discharge container
+                    Microcell_charge.erase(Microcell_charge.begin(), it); // delete the microcell from charge container
+                }
+                else
+                    buffer.erase(buffer.begin()); // photon did not fire the microcell therefore the photon is deleted
+            }
+            else (){ // the microcell is not present therefore it must be created
+                Microcell temp(buffer[0], arr_bins[i]); // call a constructor of Microcell
+                if (temp.discharge_init(buffer[0], arr_bins[i])){ // check whether photon fires the microcell
+                    Microcell_discharge.push_back(temp); // and push the object to container
+                }
+                else
+                    buffer.erase(buffer.begin()); // photon did not fire the microcell therefore the photon is deleted
+            }
+        }
+
+        /* This block od code controls discharging and charging of microcells and also manages the discharge and charge containers */
+        if (Microcell_discharge.size() != 0 || Microcell_charge.size() != 0){
+
+        }
+        else
+            continue;
+
+    }
+
+
+
+
+
     while (buffer.size() != 0)
     {
         SiPM_microcells[buffer[0].index].discharge(buffer[0], buffer, this);
