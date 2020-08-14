@@ -59,7 +59,7 @@ int main()
     /* RUN SIMULATION ROUTINE IN FOR CYCLE */
     //sipm.linearity_simulation("Integration.csv", crystal);
     //sipm.statistical_simulation("Photon_pulse.csv", crystal, deposited_energy[0], repetition);
-    //sipm.wide_simulation("_p", crystal, deposited_energy, repetition);
+    sipm.wide_simulation("_p", crystal, deposited_energy, repetition);
     //sipm.spice_simulation("Pulse.pwl", crystal, deposited_energy[0]);
 
     //sipm.~SiPM(); // explicitely called destructor

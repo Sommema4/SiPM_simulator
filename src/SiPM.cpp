@@ -40,8 +40,32 @@ SiPM::SiPM(std::string sipm_name, std::string sipm_lib, double ov, double geo_fa
     nlohmann::json sipm;
     i >> sipm;
 
+    /* Check the existence of parameters in .json file */
+    std::cout << sipm_name << std::endl;
+    M_Assert(sipm.find(sipm_name) != sipm.end(), "SiPM was not found in the .json file");
+    M_Assert(sipm[sipm_name].find("inner parameters") != sipm[sipm_name].end(), "'inner parameters' was not found in the .json file");
+    M_Assert(sipm[sipm_name]["inner parameters"].find("R_q") != sipm[sipm_name]["inner parameters"].end(), "'R_q' was not found in the .json file");
+    M_Assert(sipm[sipm_name]["inner parameters"].find("C_q") != sipm[sipm_name]["inner parameters"].end(), "'C_q' was not found in the .json file");
+    M_Assert(sipm[sipm_name]["inner parameters"].find("C_d") != sipm[sipm_name]["inner parameters"].end(), "'C_d' was not found in the .json file");
+    M_Assert(sipm[sipm_name]["inner parameters"].find("R_d") != sipm[sipm_name]["inner parameters"].end(), "'R_d' was not found in the .json file");
+    M_Assert(sipm[sipm_name]["inner parameters"].find("C_m") != sipm[sipm_name]["inner parameters"].end(), "'C_m' was not found in the .json file");
+    M_Assert(sipm[sipm_name]["inner parameters"].find("N_c") != sipm[sipm_name]["inner parameters"].end(), "'N_c' was not found in the .json file");
+    M_Assert(sipm[sipm_name].find("noise effects") != sipm[sipm_name].end(), "'noise effects' was not found in the .json file");
+    M_Assert(sipm[sipm_name]["noise effects"].find("afterpulse") != sipm[sipm_name]["noise effects"].end(), "'afterpulse' was not found in the .json file");
+    M_Assert(sipm[sipm_name]["noise effects"].find("crosstalk") != sipm[sipm_name]["noise effects"].end(), "'crosstalk' was not found in the .json file");
+    M_Assert(sipm[sipm_name]["noise effects"].find("dark current") != sipm[sipm_name]["noise effects"].end(), "'dark current' was not found in the .json file");
+    M_Assert(sipm[sipm_name]["noise effects"]["afterpulse"].find("function") != sipm[sipm_name]["noise effects"]["afterpulse"].end(), "'function' was not found in the .json file");
+    M_Assert(sipm[sipm_name]["noise effects"]["crosstalk"].find("function") != sipm[sipm_name]["noise effects"]["crosstalk"].end(), "'function' was not found in the .json file");
+    M_Assert(sipm[sipm_name]["noise effects"]["afterpulse"].find("afterpulse intensity") != sipm[sipm_name]["noise effects"]["afterpulse"].end(), "'afterpulse intensity' was not found in the .json file");
+    M_Assert(sipm[sipm_name]["noise effects"]["afterpulse"].find("afterpulse component") != sipm[sipm_name]["noise effects"]["afterpulse"].end(), "'afterpulse component' was not found in the .json file");
+    M_Assert(sipm[sipm_name]["noise effects"]["afterpulse"]["function"].find("overvoltage") != sipm[sipm_name]["noise effects"]["afterpulse"]["function"].end(), "'overvoltage' was not found in the .json file");
+    M_Assert(sipm[sipm_name]["noise effects"]["afterpulse"]["function"].find("probability") != sipm[sipm_name]["noise effects"]["afterpulse"]["function"].end(), "'probability' was not found in the .json file");
+    M_Assert(sipm[sipm_name]["noise effects"]["crosstalk"]["function"].find("qe") != sipm[sipm_name]["noise effects"]["crosstalk"]["function"].end(), "'overvoltage' was not found in the .json file");
+    M_Assert(sipm[sipm_name]["noise effects"]["crosstalk"]["function"].find("probability") != sipm[sipm_name]["noise effects"]["crosstalk"]["function"].end(), "'probability' was not found in the .json file");
+    M_Assert(sipm[sipm_name]["noise effects"]["dark current"].find("dark count rate") != sipm[sipm_name]["noise effects"]["dark current"].end(), "'dark count rate' was not found in the .json file");
+    M_Assert(sipm[sipm_name].find("absorption spectrum") != sipm[sipm_name].end(), "'absorption spectrum' was not found in the .json file");
+
     /* Save inner parameters of SiPM to SiPM object */
-    assert(sipm.find(sipm_name) !=  sipm.end());
     name = sipm_name;
     R_q = sipm[sipm_name]["inner parameters"]["R_q"]; // quenching resistor
     C_q = sipm[sipm_name]["inner parameters"]["C_q"]; // capacitance of quenching resistor
@@ -58,22 +82,15 @@ SiPM::SiPM(std::string sipm_name, std::string sipm_lib, double ov, double geo_fa
     R_l = load_resistor;
 
     /* Save parameters of noise effects to SiPM object and use spline interpolation */
-    //double a;
-    //M_Assert(a = sipm[sipm_name]["noise effects"]["dark current"]["dark acount rate"], "asasd");
-    //M_Assert(("A must be equal to B", a == sipm[sipm_name]["noise effects"]["dark current"]["dark acount rate"]));
-    //assert(a = sipm[sipm_name]["noise effects"]["dark current"]["dark count rate"]);
-    //std::cout << "spatny a: " << a << std::endl;
     afterpulse_weights = sipm[sipm_name]["noise effects"]["afterpulse"]["afterpulse intensity"].get<std::vector<double>>();
     afterpulse_components = sipm[sipm_name]["noise effects"]["afterpulse"]["afterpulse component"].get<std::vector<double>>();
     for (int i=0;i<afterpulse_weights.size();i++)
         afterpulse_amplitude.push_back(afterpulse_weights[i] / afterpulse_components[i]);
     std::vector<double> x_afterpulse = sipm[sipm_name]["noise effects"]["afterpulse"]["function"]["overvoltage"].get<std::vector<double>>();
     std::vector<double> y_afterpulse = sipm[sipm_name]["noise effects"]["afterpulse"]["function"]["probability"].get<std::vector<double>>();
-    std::vector<double> x_crosstalk = sipm[sipm_name]["noise effects"]["crosstalk"]["function"]["kacer"].get<std::vector<double>>();
+    std::vector<double> x_crosstalk = sipm[sipm_name]["noise effects"]["crosstalk"]["function"]["qe"].get<std::vector<double>>();
     std::vector<double> y_crosstalk = sipm[sipm_name]["noise effects"]["crosstalk"]["function"]["probability"].get<std::vector<double>>();
-    spline afterpulse_function;
-    afterpulse_function.set_points(x_afterpulse, y_afterpulse);
-    spline crosstalk_function;
+    afterpulse_function.set_points(x_crosstalk, y_crosstalk);
     crosstalk_function.set_points(y_crosstalk, x_crosstalk);
     dark_count_rate = sipm[sipm_name]["noise effects"]["dark current"]["dark count rate"].get<double>();
 
@@ -89,24 +106,19 @@ SiPM::SiPM(std::string sipm_name, std::string sipm_lib, double ov, double geo_fa
         }
     }
 
-    /* Create and save a look-up table to SiPM object */
+    /* Create and save a look-up table into SiPM object */
     LUT = new sipm_par[N_c+1];
     for (int i=0;i<N_c+1;i++){
         LUT[i].C_eq = (N_c - i) * ((C_d * C_q) / (C_d + C_q)) + N_c * C_m;
         LUT[i].a1 = (R_d * C_d * (R_q + i * R_l) + R_q * C_q * (R_d + i * R_l) + LUT[i].C_eq * R_l * (R_q + R_d)) / (R_q + R_d + i * R_l);
         LUT[i].a2 = ((R_d * R_q * R_l) / (R_q + R_d + i * R_l)) * (LUT[i].C_eq * (C_d + C_q) + i * C_d * C_q);
-        LUT[i].T_i = (2 * LUT[i].a2) / LUT[i].a1 + sqrt(pow(LUT[i].a1, 2) - 4 * LUT[i].a2);
-        LUT[i].T_d = (2 * LUT[i].a2) / LUT[i].a1 - sqrt(pow(LUT[i].a1, 2) - 4 * LUT[i].a2);
+        LUT[i].T_i = (2 * LUT[i].a2) / (LUT[i].a1 + sqrt(pow(LUT[i].a1, 2) - 4 * LUT[i].a2));
+        LUT[i].T_d = (2 * LUT[i].a2) / (LUT[i].a1 - sqrt(pow(LUT[i].a1, 2) - 4 * LUT[i].a2));
         LUT[i].a_m_1 = R_q * (C_d + C_q) + R_l * (LUT[i].C_eq + i * C_d);
         LUT[i].a_m_2 = R_q * R_l * (LUT[i].C_eq * (C_d + C_q) + i * C_d * C_q);
         LUT[i].T_i2 = (2 * LUT[i].a_m_2) / (LUT[i].a_m_1 + sqrt(pow(LUT[i].a_m_1, 2) - 4 * LUT[i].a_m_2));
         LUT[i].T_d2 = (2 * LUT[i].a_m_2) / (LUT[i].a_m_1 - sqrt(pow(LUT[i].a_m_1, 2) - 4 * LUT[i].a_m_2));
     }
-
-    for (int i=0;i<N_c;i++){
-        Microcell temp(i, overvoltage);
-        SiPM_microcells.push_back(temp);
-    };
 
     timestep = time_step;
     pulse_lenght = pls_lenght;
@@ -161,64 +173,106 @@ void SiPM::map_light(std::vector<light>& buffer)
 
 void SiPM::simulate(std::vector<light> buffer)
 {
+    //std::cout << "1" << std::endl;
     for (int i=0;i<arr_bins.size();i++){ // loop over all discrete times of the simulation
-
+        double master = 0;
+        //std::cout << "i: " << arr_bins[i] << std::endl;
+        //std::cout << Microcell_discharge.size() << ", " << Microcell_charge.size() << std::endl;
+        if (buffer.size() == 0 && Microcell_discharge.size() == 0 && Microcell_charge.size() == 0)
+            break;
+        //std::cout << "i:" << i << std::endl;
         /* While statement fills discharge and charge container with fired microcells */
         while (std::abs(buffer[0].time - arr_bins[i]) < (timestep / 2.0)){ // if true the photon hit a microcell
-
-            auto it = find_if(Microcell_discharge.begin(), Microcell_discharge.end(), [] (const Microcell& obj) {return obj.get_ID() == buffer[0].index;}); // find iterator to object with the same index in discharge container
-                if (it != Microcell_discharge.end()){ // the microcell is in the discharge container already
-                    buffer.erase(buffer.begin()); // photon is deleted - the microcell cannot be discharged two times at the same time
-                }
-            auto it = find_if(Microcell_charge.begin(), Microcell_charge.end(), [] (const Microcell& obj) {return obj.get_ID() == buffer[0].index;}); // find iterator to object with the same index in charge container
+            //std::cout << std::abs(buffer[0].time - arr_bins[i]) << ", " << timestep / 2.0 << std::endl;
+            //std::cout << buffer[0].time << ", " << buffer[0].index << std::endl;
+            auto it = find_if(Microcell_discharge.begin(), Microcell_discharge.end(), [&buffer] (Microcell& obj) {return obj.get_ID() == buffer[0].index;}); // find iterator to object with the same index in discharge container
+            if (it != Microcell_discharge.end()){ // the microcell is in the discharge container already
+                //std::cout << "here we are" << std::endl;
+                buffer.erase(buffer.begin()); // photon is deleted - the microcell cannot be discharged two times at the same time
+            }
+            it = find_if(Microcell_charge.begin(), Microcell_charge.end(), [&buffer] (Microcell& obj) {return obj.get_ID() == buffer[0].index;}); // find iterator to object with the same index in charge container
             if (it != Microcell_charge.end()){ // the microcell is in the charge container already
-                if (it->discharge_init(buffer[0], arr_bins[i])){ // check whether photon fires the microcell
-                    std::move(Microcell_charge.begin(), it, std::back_inserter(Microcell_discharge)); // move the microcell from charge container to discharge container
-                    Microcell_charge.erase(Microcell_charge.begin(), it); // delete the microcell from charge container
+                if (it->discharge_init(buffer[0], arr_bins[i], this, buffer)){ // check whether photon fires the microcell
+
+                    //std::cout << "charging microcell was hit again" << std::endl;
+                    //std::cout << "1: " << std::endl;
+                    //std::cout << "Microcell_discharge.size(): " << Microcell_discharge.size() << std::endl;
+                    //std::cout << "Microcell_charge.size(): " << Microcell_charge.size() << std::endl;
+                    Microcell_discharge.push_back(*it);
+                    Microcell_charge.erase(it); // delete the microcell from charge container
+                    //std::cout << "2: " << std::endl;
+                    //std::cout << "Microcell_discharge.size(): " << Microcell_discharge.size() << std::endl;
+                    //std::cout << "Microcell_charge.size(): " << Microcell_charge.size() << std::endl;
                 }
                 else
                     buffer.erase(buffer.begin()); // photon did not fire the microcell therefore the photon is deleted
             }
-            else (){ // the microcell is not present therefore it must be created
-                Microcell temp(buffer[0], arr_bins[i]); // call a constructor of Microcell
-                if (temp.discharge_init(buffer[0], arr_bins[i])){ // check whether photon fires the microcell
+            else { // the microcell is not present therefore it must be created
+                //std::cout << "Microcell constructed: " << buffer[0].index << std::endl;
+                Microcell temp(buffer[0].index, overvoltage); // call a constructor of Microcell
+                //std::cout << "It is gonna crash 1" << std::endl;
+                if (temp.discharge_init(buffer[0], arr_bins[i], this, buffer)){ // check whether photon fires the microcell
+                    //std::cout << "It is gonna crash 2" << std::endl;
                     Microcell_discharge.push_back(temp); // and push the object to container
+                    //std::cout << "Microcell fired: " << std::endl;
                 }
                 else
                     buffer.erase(buffer.begin()); // photon did not fire the microcell therefore the photon is deleted
+                    //std::cout << "Microcell not fired: " << std::endl;
             }
         }
-
-        /* This block od code controls discharging and charging of microcells and also manages the discharge and charge containers */
+        /* This block of code controls discharging and charging of microcells and also manages the discharge and charge containers */
         if (Microcell_discharge.size() != 0 || Microcell_charge.size() != 0){
+            int idx = Microcell_discharge.size();
+            sipm_par par = LUT[idx]; // find correct parameters of SiPM
+            //std::cout << par.C_eq << ", " << par.a1 << ", " << par.a2 << ", " << par.T_i << ", " << par.T_d << ", " << par.a_m_1 << ", " << par.a_m_2 << ", " << par.T_i2 << ", " << par.T_d2 << std::endl;
+            //std::cout << "Microcell_discharge.size(): " << Microcell_discharge.size() << std::endl;
+            for (int j=0;j<Microcell_discharge.size();j++){
+                master += Microcell_discharge[j].discharge(arr_bins[i], j, this, par); // if microcell finished discharging erase it from the discharge container and move it to charge container
+            }
 
+            //std::cout << "1: " << std::endl;
+            //std::cout << "Microcell_discharge.size(): " << Microcell_discharge.size() << std::endl;
+            //std::cout << "Microcell_charge.size(): " << Microcell_charge.size() << std::endl;
+
+            sort(Microcell_discharge.begin(), Microcell_discharge.end(), [](const Microcell& obj1, const Microcell& obj2) {return obj1.discharged < obj2.discharged;}); // sort Microcell_discharge
+            for (auto it =  Microcell_discharge.rbegin(); it != Microcell_discharge.rend(); ++it){
+                if (it->discharged == 1){ // pop Microcells which are finished and push them back to Microcell_charge
+                    //std::cout << "1: " << std::endl;
+                    //std::cout << "Microcell_discharge.size(): " << Microcell_discharge.size() << std::endl;
+                    //std::cout << "Microcell_charge.size(): " << Microcell_charge.size() << std::endl;
+                    Microcell_charge.push_back(*it);
+                    Microcell_discharge.pop_back();
+                    //std::cout << "2: " << std::endl;
+                    //std::cout << "Microcell_discharge.size(): " << Microcell_discharge.size() << std::endl;
+                    //std::cout << "Microcell_charge.size(): " << Microcell_charge.size() << std::endl;
+                }
+            }
+            //std::cout << "2: " << std::endl;
+            //std::cout << "Microcell_discharge.size(): " << Microcell_discharge.size() << std::endl;
+            //std::cout << "Microcell_charge.size(): " << Microcell_charge.size() << std::endl;
+            for (int k=0;k<Microcell_charge.size();k++){
+                master += Microcell_charge[k].charge(arr_bins[i], k, this, par); // if microcell finished charging erase it from the charge container
+                //if (tm != 0)
+                  //std::cout << "tm: " << tm << std::endl;
+            }
+            //std::cout << "asdasdasdadasd" << std::endl;
+            sort(Microcell_charge.begin(), Microcell_charge.end(), [](const Microcell& obj1, const Microcell& obj2) {return obj1.charged < obj2.charged;}); // sort Microcell_charge
+            for (auto it =  Microcell_charge.rbegin(); it != Microcell_charge.rend(); ++it){
+                if (it->charged == 1){ // pop Microcells which are finished and push them back to Microcell_charge
+                    Microcell_charge.pop_back();
+                }
+            }
+            //std::cout << "asdasda2" << std::endl;
         }
         else
             continue;
-
-    }
-
-
-
-
-
-    while (buffer.size() != 0)
-    {
-        SiPM_microcells[buffer[0].index].discharge(buffer[0], buffer, this);
-        buffer.erase(buffer.begin());
-    }
-
-    for (int i=0;i<SiPM_microcells.size();i++){
-        //std::cout << arr_bins[-1] << std::endl;
-        SiPM_microcells[i].load_discharge(arr_bins[output_size-1], this);
+    std::cout << arr_bins[i] << ", " << master << ", " << arr_light[i] << ", " << arr_afterpulse[i] << std::endl;
     }
 }
 
 void SiPM::reset()
 {
-    for (int i=0;i<SiPM_microcells.size();i++)
-        SiPM_microcells[i].reset(this);
-
     for(int i=0;i<output_size;i++){
         arr_light[i] = 0;
         arr_afterpulse[i] = 0;
@@ -242,7 +296,6 @@ void SiPM::print_sipm(void)
     std::cout << "C_m: " << C_m << " F" << std::endl;
     std::cout << "I_th: " << I_th << " A" << std::endl;
     std::cout << "N_c: " << N_c << " #" << std::endl;
-    std::cout << "Microcell vector size: " << SiPM_microcells.size() << " #" << std::endl;
     std::cout << "------------------------------------" << std::endl;
     std::cout << std::endl;
 }
@@ -256,6 +309,9 @@ std::ostream& operator<<(std::ostream& os, const SiPM* en)
 
 void SiPM::tally_pulse_shape(std::string name)
 {
+
+  for (int i=0;i<arr_light.size();i++)
+      std::cout << arr_light[i] << std::endl;;
     std::ofstream myfile;
     if (is_file_exist(name)){
         myfile.open(name, std::ios_base::app);

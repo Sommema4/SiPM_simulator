@@ -21,9 +21,6 @@ class SiPM
         void map_light(std::vector<light>&);
         void dark_current(std::vector<light>&);
         void reset();
-        void read_absorption_spectrum(std::string);
-        void read_crosstalk_probability(std::string);
-        void read_afterpulse_probability(std::string);
         void print_sipm(void);
         void tally_pulse_shape(std::string);
         friend std::ostream& operator<<(std::ostream&, const SiPM *);
@@ -63,7 +60,6 @@ class SiPM
         std::vector<double> afterpulse_components;
         std::vector<double> afterpulse_amplitude;
         double dark_count_rate;
-        std::vector<class Microcell> SiPM_microcells;
         std::vector<class Microcell> Microcell_discharge;
         std::vector<class Microcell> Microcell_charge;
         std::map<double, coordinates> absorption_spectrum;
