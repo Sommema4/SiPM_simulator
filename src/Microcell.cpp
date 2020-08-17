@@ -80,8 +80,10 @@ double Microcell::calculate_QE(double wavelenght, SiPM *sipm)
     }
     //std::cout << "QE " << QE << std::endl;
 
-    if (QE > 1.0 || QE < 0.0)
+    if (QE > 1.0 || QE < 0.0){
         std::cout << "Error: QE = " << QE << std::endl;
+        std::cout << "Error: V_ov = " << V_ov << std::endl;
+    }
     return QE;
 }
 

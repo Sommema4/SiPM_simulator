@@ -181,7 +181,7 @@ void SiPM::simulate(std::vector<light> buffer)
             break;
 
         /* While statement fills discharge and charge container with fired microcells */
-        while (std::abs(buffer[0].time - arr_bins[i]) < (timestep / 2.0)){ // if true the photon hit a microcell
+        while (std::abs(buffer[0].time - arr_bins[i]) < (timestep / 2.0)){ // if true the photon hits a microcell
             auto it = find_if(Microcell_discharge.begin(), Microcell_discharge.end(), [&buffer] (Microcell& obj) {return obj.get_ID() == buffer[0].index;}); // find iterator to object with the same index in discharge container
             if (it != Microcell_discharge.end()){ // the microcell is in the discharge container already
                 buffer.erase(buffer.begin()); // photon is deleted - the microcell cannot be discharged two times at the same time
@@ -189,6 +189,7 @@ void SiPM::simulate(std::vector<light> buffer)
             it = find_if(Microcell_charge.begin(), Microcell_charge.end(), [&buffer] (Microcell& obj) {return obj.get_ID() == buffer[0].index;}); // find iterator to object with the same index in charge container
             if (it != Microcell_charge.end()){ // the microcell is in the charge container already
                 if (it->discharge_init(buffer[0], arr_bins[i], this, buffer)){ // check whether photon fires the microcell
+                    //std::cout << "asdasd" << std::endl;
                     Microcell_discharge.push_back(*it);
                     Microcell_charge.erase(it); // delete the microcell from charge container
                 }
@@ -243,6 +244,8 @@ void SiPM::simulate(std::vector<light> buffer)
 
 void SiPM::reset()
 {
+    Microcell_discharge = {};
+    Microcell_charge = {};
     for(int i=0;i<output_size;i++){
         arr_light[i] = 0;
         arr_afterpulse[i] = 0;
