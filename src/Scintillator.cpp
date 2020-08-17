@@ -91,3 +91,8 @@ std::string Scintillator::get_name(void)
 {
     return name;
 }
+
+std::string Scintillator::get_extension(void)
+{
+    return particle_abbrev;
+}

@@ -12,6 +12,7 @@ class Scintillator
         void print_scintillator(void);
         int get_photons(void);
         std::string get_name(void);
+        std::string get_extension(void);
 
     protected:
 

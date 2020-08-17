@@ -5,13 +5,55 @@
 #include <algorithm>
 #include <random>
 #include <ctime>
+#include <fstream>
 #include <iostream>
 #include <cmath>
 #include <sys/stat.h>
+#include "json.hpp"
 
 time_t current_time = time(NULL);
 std::mt19937 generator(current_time);
 std::uniform_real_distribution<double> uniform_distribution(0.0,1.0);
+
+void parse_settings_json(settings *set, std::string filename)
+{
+    std::ifstream i(filename);
+    nlohmann::json init;
+    i >> init;
+
+    /* SIMULATION VARIABLES */
+    set->sim_name = init["simulation"]["name"]; // the name of your simulation
+    set->out_dir = init["simulation"]["parent directory"]; // the name of the directory where results will be saved - relative to the binary file
+    set->sim_type = init["simulation"]["calculation type"]; // the type of the simulation
+    set->out_aux = init["simulation"]["auxiliary output"]; // decides if auxiliary output should be written to file [boolean]
+    set->overvoltage = init["simulation"]["overvoltage"];
+    set->geometry_factor = init["simulation"]["geometry factor"];
+    set->R_l = init["simulation"]["load resistor"]; // load resistor
+    set->I_th = init["simulation"]["threshold current"]; // threshold level of current to sustain the avalanche = 0.0001 A
+
+    /* GLOBAL VARIABLES */
+    set->repetition = init["global variables"]["repetition"]; // the number of simuation repetitons for each deposited energy
+    set->timestep = init["global variables"]["timestep"]; // the lenght of timestep in the simulation [seconds]
+    set->pulse_lenght = init["global variables"]["pulse lenght"]; // the maximum lenght of the calculation [seconds]
+    set->deposited_energy = init["global variables"]["deposited energy"].get<std::vector<double>>();; // the list of energies of the simulation [MeV]
+
+    /* SCINTILLATOR VARIABLES */
+    set->scint_name = init["scintillator"]["name"]; // the full name of scintillator
+    set->scint_lib = init["scintillator"]["library"]; // the scintillator library name
+    set->particle = init["scintillator"]["particle type"]; // the abbreviation of particle and its full name
+    set->photon_list = init["scintillator"]["photon list"]; // decides if list of all generated photons should be written to auxiliary output [boolean]
+
+    /* SiPM VARIABLES */
+    set->sipm_name = init["sipm"]["name"]; // the full name of sipm
+    set->sipm_lib = init["sipm"]["library"]; // the sipm library name
+    set->crosstalk = init["sipm"]["crosstalk"]; // decides if crosstalk should be taken into account during calculation [boolean]
+    set->afterpulse = init["sipm"]["afterpulse"]; // decides if afterpulse should be taken into account during calculation [boolean]
+    set->dark_current = init["sipm"]["dark current"]; // decides if dark current should be taken into account during calculation [boolean]
+
+    /* ALGORITHM PARAMETERS */
+    set->interpolation = init["algorithm parameters"]["interpolation"]; // chooses the type of interpolation technique
+    set->seed = init["algorithm parameters"]["seed"]; // the seed number, if seed=0 the number is chosen based on the time
+}
 
 void print_seed(void)
 {

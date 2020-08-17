@@ -33,7 +33,7 @@ void __M_Assert(const char* expr_str, bool expr, const char* file, int line, con
     }
 }
 
-SiPM::SiPM(std::string sipm_name, std::string sipm_lib, double ov, double geo_factor, double load_resistor, double current_threshold, double time_step, double pls_lenght)
+SiPM::SiPM(std::string sipm_name, std::string sipm_lib, double ov, double geo_factor, double load_resistor, double current_threshold, double time_step, double pls_lenght, bool ap, bool ct, bool dc)
 {
     /* Open up a .json file */
     std::ifstream i(sipm_lib);
@@ -80,6 +80,9 @@ SiPM::SiPM(std::string sipm_name, std::string sipm_lib, double ov, double geo_fa
     overvoltage = ov;
     I_th = current_threshold; // threshold current to sustain an avalanche
     R_l = load_resistor;
+    afterpulse_swich = ap;
+    crosstalk_swich = ct;
+    dark_current_swich = dc;
 
     /* Save parameters of noise effects to SiPM object and use spline interpolation */
     afterpulse_weights = sipm[sipm_name]["noise effects"]["afterpulse"]["afterpulse intensity"].get<std::vector<double>>();
@@ -173,101 +176,68 @@ void SiPM::map_light(std::vector<light>& buffer)
 
 void SiPM::simulate(std::vector<light> buffer)
 {
-    //std::cout << "1" << std::endl;
     for (int i=0;i<arr_bins.size();i++){ // loop over all discrete times of the simulation
-        double master = 0;
-        //std::cout << "i: " << arr_bins[i] << std::endl;
-        //std::cout << Microcell_discharge.size() << ", " << Microcell_charge.size() << std::endl;
         if (buffer.size() == 0 && Microcell_discharge.size() == 0 && Microcell_charge.size() == 0)
             break;
-        //std::cout << "i:" << i << std::endl;
+
         /* While statement fills discharge and charge container with fired microcells */
         while (std::abs(buffer[0].time - arr_bins[i]) < (timestep / 2.0)){ // if true the photon hit a microcell
-            //std::cout << std::abs(buffer[0].time - arr_bins[i]) << ", " << timestep / 2.0 << std::endl;
-            //std::cout << buffer[0].time << ", " << buffer[0].index << std::endl;
             auto it = find_if(Microcell_discharge.begin(), Microcell_discharge.end(), [&buffer] (Microcell& obj) {return obj.get_ID() == buffer[0].index;}); // find iterator to object with the same index in discharge container
             if (it != Microcell_discharge.end()){ // the microcell is in the discharge container already
-                //std::cout << "here we are" << std::endl;
                 buffer.erase(buffer.begin()); // photon is deleted - the microcell cannot be discharged two times at the same time
             }
             it = find_if(Microcell_charge.begin(), Microcell_charge.end(), [&buffer] (Microcell& obj) {return obj.get_ID() == buffer[0].index;}); // find iterator to object with the same index in charge container
             if (it != Microcell_charge.end()){ // the microcell is in the charge container already
                 if (it->discharge_init(buffer[0], arr_bins[i], this, buffer)){ // check whether photon fires the microcell
-
-                    //std::cout << "charging microcell was hit again" << std::endl;
-                    //std::cout << "1: " << std::endl;
-                    //std::cout << "Microcell_discharge.size(): " << Microcell_discharge.size() << std::endl;
-                    //std::cout << "Microcell_charge.size(): " << Microcell_charge.size() << std::endl;
                     Microcell_discharge.push_back(*it);
                     Microcell_charge.erase(it); // delete the microcell from charge container
-                    //std::cout << "2: " << std::endl;
-                    //std::cout << "Microcell_discharge.size(): " << Microcell_discharge.size() << std::endl;
-                    //std::cout << "Microcell_charge.size(): " << Microcell_charge.size() << std::endl;
                 }
                 else
                     buffer.erase(buffer.begin()); // photon did not fire the microcell therefore the photon is deleted
             }
             else { // the microcell is not present therefore it must be created
-                //std::cout << "Microcell constructed: " << buffer[0].index << std::endl;
                 Microcell temp(buffer[0].index, overvoltage); // call a constructor of Microcell
-                //std::cout << "It is gonna crash 1" << std::endl;
                 if (temp.discharge_init(buffer[0], arr_bins[i], this, buffer)){ // check whether photon fires the microcell
-                    //std::cout << "It is gonna crash 2" << std::endl;
                     Microcell_discharge.push_back(temp); // and push the object to container
-                    //std::cout << "Microcell fired: " << std::endl;
                 }
                 else
                     buffer.erase(buffer.begin()); // photon did not fire the microcell therefore the photon is deleted
-                    //std::cout << "Microcell not fired: " << std::endl;
             }
         }
-        /* This block of code controls discharging and charging of microcells and also manages the discharge and charge containers */
+
+        /* This block of code controls discharging of microcells */
         if (Microcell_discharge.size() != 0 || Microcell_charge.size() != 0){
             int idx = Microcell_discharge.size();
-            sipm_par par = LUT[idx]; // find correct parameters of SiPM
-            //std::cout << par.C_eq << ", " << par.a1 << ", " << par.a2 << ", " << par.T_i << ", " << par.T_d << ", " << par.a_m_1 << ", " << par.a_m_2 << ", " << par.T_i2 << ", " << par.T_d2 << std::endl;
-            //std::cout << "Microcell_discharge.size(): " << Microcell_discharge.size() << std::endl;
-            for (int j=0;j<Microcell_discharge.size();j++){
-                master += Microcell_discharge[j].discharge(arr_bins[i], j, this, par); // if microcell finished discharging erase it from the discharge container and move it to charge container
-            }
+            sipm_par par = LUT[idx]; // find correct parameters of SiPM based on the number of the active microcells
 
-            //std::cout << "1: " << std::endl;
-            //std::cout << "Microcell_discharge.size(): " << Microcell_discharge.size() << std::endl;
-            //std::cout << "Microcell_charge.size(): " << Microcell_charge.size() << std::endl;
+            /* DISCHARGE */
+            for (int j=0;j<Microcell_discharge.size();j++)
+                Microcell_discharge[j].discharge(arr_bins[i], i, this, par); // discharge Microcell
 
+            /* This block of code manages the correct operation of discharge containers - sorts container and pops Microcells which are discharged and moves them to charge container */
             sort(Microcell_discharge.begin(), Microcell_discharge.end(), [](const Microcell& obj1, const Microcell& obj2) {return obj1.discharged < obj2.discharged;}); // sort Microcell_discharge
-            for (auto it =  Microcell_discharge.rbegin(); it != Microcell_discharge.rend(); ++it){
-                if (it->discharged == 1){ // pop Microcells which are finished and push them back to Microcell_charge
-                    //std::cout << "1: " << std::endl;
-                    //std::cout << "Microcell_discharge.size(): " << Microcell_discharge.size() << std::endl;
-                    //std::cout << "Microcell_charge.size(): " << Microcell_charge.size() << std::endl;
-                    Microcell_charge.push_back(*it);
-                    Microcell_discharge.pop_back();
-                    //std::cout << "2: " << std::endl;
-                    //std::cout << "Microcell_discharge.size(): " << Microcell_discharge.size() << std::endl;
-                    //std::cout << "Microcell_charge.size(): " << Microcell_charge.size() << std::endl;
+            for (auto it =  Microcell_discharge.rbegin(); it != Microcell_discharge.rend(); ++it){ // backward iteration through discharge container
+                if (it->discharged == 1){ // if Microcell is discharged
+                    Microcell_charge.push_back(*it); // move it to charge container
+                    Microcell_discharge.pop_back(); // pop it from discharge container
                 }
             }
-            //std::cout << "2: " << std::endl;
-            //std::cout << "Microcell_discharge.size(): " << Microcell_discharge.size() << std::endl;
-            //std::cout << "Microcell_charge.size(): " << Microcell_charge.size() << std::endl;
+
+            /* CHARGE */
             for (int k=0;k<Microcell_charge.size();k++){
-                master += Microcell_charge[k].charge(arr_bins[i], k, this, par); // if microcell finished charging erase it from the charge container
-                //if (tm != 0)
-                  //std::cout << "tm: " << tm << std::endl;
+                Microcell_charge[k].charge(arr_bins[i], i, this, par); // charge Microcell
             }
-            //std::cout << "asdasdasdadasd" << std::endl;
+
+            /* This block of code manages the correct operation of charge containers - sorts container and pops Microcells which are charged */
             sort(Microcell_charge.begin(), Microcell_charge.end(), [](const Microcell& obj1, const Microcell& obj2) {return obj1.charged < obj2.charged;}); // sort Microcell_charge
             for (auto it =  Microcell_charge.rbegin(); it != Microcell_charge.rend(); ++it){
-                if (it->charged == 1){ // pop Microcells which are finished and push them back to Microcell_charge
-                    Microcell_charge.pop_back();
+                if (it->charged == 1){ // if Microcell is charged
+                    Microcell_charge.pop_back(); // pop it from charge container
                 }
             }
-            //std::cout << "asdasda2" << std::endl;
         }
         else
             continue;
-    std::cout << arr_bins[i] << ", " << master << ", " << arr_light[i] << ", " << arr_afterpulse[i] << std::endl;
     }
 }
 
@@ -307,11 +277,8 @@ std::ostream& operator<<(std::ostream& os, const SiPM* en)
     return os;
 }
 
-void SiPM::tally_pulse_shape(std::string name)
+void SiPM::tally_waveform(std::string name)
 {
-
-  for (int i=0;i<arr_light.size();i++)
-      std::cout << arr_light[i] << std::endl;;
     std::ofstream myfile;
     if (is_file_exist(name)){
         myfile.open(name, std::ios_base::app);
@@ -333,11 +300,8 @@ void SiPM::tally_pulse_shape(std::string name)
         for (int i=0;i<arr_bins.size();i++)
             myfile << arr_bins[i] << " ";
         myfile << std::endl;
-        for (int i=0;i<arr_light.size();i++){
+        for (int i=0;i<arr_light.size();i++)
             myfile << arr_light[i] << " ";
-            //std::cout << arr_light[i] << std::endl;
-        }
-
         myfile << std::endl;
         for (int i=0;i<arr_afterpulse.size();i++)
             myfile << arr_afterpulse[i] << " ";
@@ -350,21 +314,6 @@ void SiPM::tally_pulse_shape(std::string name)
         myfile << std::endl;
     }
 
-    //myfile << this;
-    myfile.close();
-}
-
-void SiPM::tally_integration(std::string filename, double energy, int photons)
-{
-    double integ_light = integrate(arr_light);
-    double integ_crosstalk = integrate(arr_crosstalk);
-    double integ_afterpulse = integrate(arr_afterpulse);
-    double integ_dark_current = integrate(arr_dark);
-
-    std::ofstream myfile;
-    myfile.open(filename, std::ios_base::app);
-    myfile << energy << "," << photons << "," << integ_light << "," << integ_crosstalk << "," << integ_afterpulse << "," << integ_dark_current << std::endl;
-    std::cout << energy << "," << photons << "," << integ_light << "," << integ_crosstalk << "," << integ_afterpulse << "," << integ_dark_current << std::endl;
     myfile.close();
 }
 
@@ -377,52 +326,24 @@ void SiPM::generate_pwl_file(std::string name)
     myfile.close();
 }
 
-void SiPM::linearity_simulation(std::string filename, Scintillator crystal)
-{
-    std::vector<double> energy_range = linspace(0.1, 50, 40);
-    for (int i=0;i<energy_range.size();i++)
-    {
-        std::cout << "Energy: " << energy_range[i] << std::endl;
-        reset(); // reset each microcell of sipm before simulation
-        std::vector<light> primaries = crystal.generate_light(energy_range[i]); // generate primaries, primaries is array of light
-        int photons = crystal.get_photons();
-        dark_current(primaries); // add dark current to primaries
-        map_light(primaries); // maps primary photons to individual microcells
-        simulate(primaries); // output is array of tally
-        tally_integration(filename, energy_range[i], photons); // prints integral of the pulse
-    }
-}
-
-void SiPM::statistical_simulation(std::string filename, Scintillator crystal, double deposited_energy, int n)
-{
-    for (int i=0;i<n;i++){
-        std::cout << i << "/" << n << std::endl;
-        reset(); // reset each microcell of sipm before simulation
-        std::vector<light> primaries = crystal.generate_light(deposited_energy); // generate primaries, primaries is array of light
-        dark_current(primaries); // add dark current to primaries
-        map_light(primaries); // maps primary photons to individual microcells
-        print_primaries(primaries, 0); // show first 5 photons in container
-        simulate(primaries); // output is array of tally
-        tally_pulse_shape(filename); // tally the matrix of pulse shape including total, afterpulse, crosstalk and dark current
-    }
-}
-
-void SiPM::wide_simulation(std::string extension, Scintillator crystal, std::vector<double> deposited_energy, int rep)
+void SiPM::waveform_simulation(std::string path, Scintillator crystal, std::vector<double> deposited_energy, int rep)
 {
     for (int i=0;i<deposited_energy.size();i++)
     {
         std::cout << deposited_energy[i] << " MeV" << std::endl;
         std::string sc = crystal.get_name();
+        std::string extension = crystal.get_extension();
         std::string filename = name + "_" + sc + "_" + std::to_string(deposited_energy[i]) + extension + ".csv";
+        filename = path + "/" + filename;
         for (int j=0;j<rep;j++){
             std::cout << j << "/" << rep << std::endl;
             reset(); // reset each microcell of sipm before simulation
             std::vector<light> primaries = crystal.generate_light(deposited_energy[i]); // generate primaries, primaries is array of light
-            dark_current(primaries); // add dark current to primaries
+            if (dark_current_swich == true)
+                dark_current(primaries); // add dark current to primaries
             map_light(primaries); // maps primary photons to individual microcells
-            //print_primaries(primaries, 0); // show first 5 photons in container
             simulate(primaries); // output is array of tally
-            tally_pulse_shape(filename); // tally the matrix of pulse shape including total, afterpulse, crosstalk and dark current
+            tally_waveform(filename); // tally the matrix of pulse shape including total, afterpulse, crosstalk and dark current
         }
     }
 }

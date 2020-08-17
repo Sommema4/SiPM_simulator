@@ -34,7 +34,35 @@ struct sipm_par
     double T_d2;
 };
 
+struct settings
+{
+  std::string sim_name;
+  std::string out_dir;
+  std::string sim_type;
+  std::string scint_name;
+  std::string scint_lib;
+  std::string particle;
+  std::string sipm_name;
+  std::string sipm_lib;
+  std::string interpolation;
+  int repetition;
+  bool out_aux;
+  bool photon_list;
+  bool crosstalk;
+  bool afterpulse;
+  bool dark_current;
+  double overvoltage;
+  double geometry_factor;
+  double R_l;
+  double I_th;
+  double timestep;
+  double pulse_lenght;
+  long double seed;
+  std::vector<double> deposited_energy;
+};
+
 // prototypes
+void parse_settings_json(settings *, std::string);
 bool compare_light_time(const light &, const light &);
 void add_pulse(int, double, std::string, std::vector<light>&);
 double linear_interpolation(double, double, double, double, double);
