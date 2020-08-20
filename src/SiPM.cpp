@@ -181,29 +181,35 @@ void SiPM::simulate(std::vector<light> buffer)
             break;
 
         /* While statement fills discharge and charge container with fired microcells */
-        while (std::abs(buffer[0].time - arr_bins[i]) < (timestep / 2.0)){ // if true the photon hits a microcell
-            auto it = find_if(Microcell_discharge.begin(), Microcell_discharge.end(), [&buffer] (Microcell& obj) {return obj.get_ID() == buffer[0].index;}); // find iterator to object with the same index in discharge container
-            if (it != Microcell_discharge.end()){ // the microcell is in the discharge container already
-                buffer.erase(buffer.begin()); // photon is deleted - the microcell cannot be discharged two times at the same time
-            }
-            it = find_if(Microcell_charge.begin(), Microcell_charge.end(), [&buffer] (Microcell& obj) {return obj.get_ID() == buffer[0].index;}); // find iterator to object with the same index in charge container
-            if (it != Microcell_charge.end()){ // the microcell is in the charge container already
-                if (it->discharge_init(buffer[0], arr_bins[i], this, buffer)){ // check whether photon fires the microcell
-                    //std::cout << "asdasd" << std::endl;
-                    Microcell_discharge.push_back(*it);
-                    Microcell_charge.erase(it); // delete the microcell from charge container
+        while (buffer.size() > 0){ // if true the photon hits a microcell
+            if (std::abs(buffer[0].time - arr_bins[i]) < (timestep / 2.0)){ // photon time corresponds to the actual time, decide what to do with that photon
+                auto it = find_if(Microcell_discharge.begin(), Microcell_discharge.end(), [&buffer] (Microcell& obj) {return obj.get_ID() == buffer[0].index;}); // find iterator to object with the same index in discharge container
+                if (it != Microcell_discharge.end()){ // the microcell is in the discharge container already
+                    buffer.erase(buffer.begin()); // photon is deleted - the microcell cannot be discharged two times at the same time
+		    continue;
                 }
-                else
+
+                it = find_if(Microcell_charge.begin(), Microcell_charge.end(), [&buffer] (Microcell& obj) {return obj.get_ID() == buffer[0].index;}); // find iterator to object with the same index in charge container
+                if (it != Microcell_charge.end()){ // the microcell is in the charge container already
+                    if (it->discharge_init(buffer[0], arr_bins[i], this, buffer)){ // check whether photon fires the microcell
+                        Microcell_discharge.push_back(*it);
+                        Microcell_charge.erase(it); // delete the microcell from charge container
+                    }
                     buffer.erase(buffer.begin()); // photon did not fire the microcell therefore the photon is deleted
-            }
-            else { // the microcell is not present therefore it must be created
-                Microcell temp(buffer[0].index, overvoltage); // call a constructor of Microcell
-                if (temp.discharge_init(buffer[0], arr_bins[i], this, buffer)){ // check whether photon fires the microcell
-                    Microcell_discharge.push_back(temp); // and push the object to container
+		    continue;
                 }
-                else
+                else{
+                    // the microcell is not present therefore it must be created
+                    Microcell temp(buffer[0].index, overvoltage); // call a constructor of Microcell
+                    if (temp.discharge_init(buffer[0], arr_bins[i], this, buffer)){ // check whether photon fires the microcell
+                        Microcell_discharge.push_back(temp); // and push the object to container
+                    }
                     buffer.erase(buffer.begin()); // photon did not fire the microcell therefore the photon is deleted
+		    continue;
+                }
             }
+            else
+                break;
         }
 
         /* This block of code controls discharging of microcells */
