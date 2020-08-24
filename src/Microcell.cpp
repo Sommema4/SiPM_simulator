@@ -96,7 +96,7 @@ void Microcell::afterpulse(int id, double time, SiPM *sipm, std::vector<light>& 
         for (int i=0;i<lenght;i++){
             double dice = get_rand_uni_dist();
             double T = bisection_method(0.0, 0.001, dice, 1e-15, sipm->afterpulse_amplitude, sipm->afterpulse_components, decay_function);
-            //std::cout << "afterpulse added" << std::endl;
+            //std::cout << "afterpulse added: " << id << " " << time + T << " " << afterpulse_probability << std::endl;
             add_pulse(id, time + T, "afterpulse", buffer);
         }
     }
@@ -104,6 +104,7 @@ void Microcell::afterpulse(int id, double time, SiPM *sipm, std::vector<light>& 
 
 void Microcell::calculate_afterpulse_probability(SiPM *sipm)
 {
+    //std::cout << "V_ov: " << V_ov << std::endl;
     afterpulse_probability = sipm->afterpulse_function(V_ov);
 }
 
@@ -137,8 +138,10 @@ double Microcell::discharge(double time, int index, SiPM *sipm, sipm_par par)
 
     if (last_origin == "scintillator_light")
         sipm->arr_light[index] += out;
-    if (last_origin == "afterpulse")
+    if (last_origin == "afterpulse"){
+	//std::cout << sipm->arr_afterpulse[index] << ", " << out << std::endl;
         sipm->arr_afterpulse[index] += out;
+    }
     if (last_origin == "dark_current")
         sipm->arr_dark[index] += out;
     if (last_origin == "crosstalk")

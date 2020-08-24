@@ -93,7 +93,7 @@ SiPM::SiPM(std::string sipm_name, std::string sipm_lib, double ov, double geo_fa
     std::vector<double> y_afterpulse = sipm[sipm_name]["noise effects"]["afterpulse"]["function"]["probability"].get<std::vector<double>>();
     std::vector<double> x_crosstalk = sipm[sipm_name]["noise effects"]["crosstalk"]["function"]["qe"].get<std::vector<double>>();
     std::vector<double> y_crosstalk = sipm[sipm_name]["noise effects"]["crosstalk"]["function"]["probability"].get<std::vector<double>>();
-    afterpulse_function.set_points(x_crosstalk, y_crosstalk);
+    afterpulse_function.set_points(x_afterpulse, y_afterpulse);
     crosstalk_function.set_points(y_crosstalk, x_crosstalk);
     dark_count_rate = sipm[sipm_name]["noise effects"]["dark current"]["dark count rate"].get<double>();
 

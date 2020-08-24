@@ -1,8 +1,8 @@
 {
    "simulation":
       {
-	 "name":"data",
-         "parent directory":"/home/sommema4/git/SiPM_simulator/",
+	 "name":"MicroFC60035_EJ-276",
+         "parent directory":"/home/sommema4/git/SiPM_simulator/data/raw/",
          "calculation type": "waveform",
 	 "auxiliary output":true,
 	 "overvoltage":2.5,
@@ -12,16 +12,16 @@
       },
    "global variables": 
       {
-         "repetition":1, 
+         "repetition":100, 
          "timestep": 1.0e-11,
          "pulse lenght": 2.5e-06,
-         "deposited energy": [0.1, 0.2]
+         "deposited energy": [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 1.5, 2.0]
       },
    "scintillator":
       {
          "name":"EJ-276",
 	 "library":"scintillator.json",
-	 "particle type":"neutron",
+	 "particle type":"photon",
 	 "photon list":true
       },
    "sipm":
